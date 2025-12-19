@@ -178,21 +178,31 @@
         }
         
         async function handleSubmit() {
-        if (isSubmitting) return;
-        isSubmitting = true;
-
-        // Visual feedback
-        gameContainer.classList.add('submitting');
-        if (tg) tg.MainButton.showProgress();
-
-        const data = {
-            action: 'submit_score',
-            username: username,
-            score: score,
-            platform: 'telegram',
-            timestamp: new Date().toISOString(),
-            initData: tg?.initData || ''
+          if (isSubmitting) return;
+          isSubmitting = true;
+          if (tg) tg.MainButton.showProgress();
+        
+          const payload = { action: 'submit_score', username, score, timestamp: new Date().toISOString() };
+        
+          try {
+            if (tg) {
+              console.log('sending via tg.sendData', payload);
+              tg.sendData(JSON.stringify(payload));
+              // برای دیباگ کمی تأخیر بگذار و فعلاً tg.close() را کامنت کن
+              await new Promise(r => setTimeout(r, 800));
+              // tg.close();
+            } else {
+              alert('Open the mini app from Telegram to submit.');
+            }
+          } catch (err) {
+            console.error('sendData failed', err);
+            if (tg) { tg.MainButton.hideProgress(); tg.showAlert('Submission failed'); }
+          } finally {
+            isSubmitting = false;
+            if (tg) tg.MainButton.hideProgress();
+          }
         };
+
 
         console.log("Submitting data:", data);
 
