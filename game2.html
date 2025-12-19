@@ -104,7 +104,9 @@
       try{
         if(tg){
           // ارسال مستقیم به بات به صورت web_app_data
+          console.log('About to send data', payload);
           tg.sendData(JSON.stringify(payload));
+          console.log('sendData called');
           // می‌توانیم وب‌اپ را ببندیم بلافاصله
           tg.close();
         } else {
