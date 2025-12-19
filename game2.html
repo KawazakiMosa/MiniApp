@@ -178,21 +178,46 @@
         }
         
         async function handleSubmit() {
-        if (isSubmitting) return;
-        isSubmitting = true;
+            if (isSubmitting) return;
+            isSubmitting = true;
+        
+            gameContainer.classList.add('submitting');
+            if (tg) tg.MainButton.showProgress();
+        
+            const payload = {
+                action: 'submit_score',
+                username: username,
+                score: score,
+                timestamp: new Date().toISOString()
+            };
+        
+            console.log("About to send payload:", payload);
+            try {
+                if (tg) {
+                    // ارسال مستقیم به بات به صورت web_app_data
+                    tg.sendData(JSON.stringify(payload));
+                    console.log("sendData called");
+                    // برای دیباگ کمی تأخیر بده تا پیام حتماً ارسال شود
+                    await new Promise(r => setTimeout(r, 800));
+                    // tg.close(); // فعلاً کامنت کن تا صفحه بسته نشود تا لاگ‌ها را ببینی
+                } else {
+                    alert(`Score ${score} submitted (local test).`);
+                }
+            } catch (err) {
+                console.error('sendData failed', err);
+                if (tg) {
+                    tg.MainButton.hideProgress();
+                    tg.showAlert('Submission failed. Try again.');
+                } else {
+                    alert('Submission failed. Try again.');
+                }
+            } finally {
+                isSubmitting = false;
+                gameContainer.classList.remove('submitting');
+                if (tg) tg.MainButton.hideProgress();
+            }
+        }
 
-        // Visual feedback
-        gameContainer.classList.add('submitting');
-        if (tg) tg.MainButton.showProgress();
-
-        const data = {
-            action: 'submit_score',
-            username: username,
-            score: score,
-            platform: 'telegram',
-            timestamp: new Date().toISOString(),
-            initData: tg?.initData || ''
-        };
 
         console.log("Submitting data:", data);
 
