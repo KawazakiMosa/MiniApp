@@ -42,6 +42,12 @@
         margin-top: 15px;
         font-size: 16px;
     }
+
+    #userinfo {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #444;
+    }
 </style>
 </head>
 
@@ -49,6 +55,8 @@
 
 <h2>🎮 بازی کلیکی</h2>
 <p>هر بار کلیک = +1 امتیاز</p>
+
+<div id="userinfo">در حال دریافت اطلاعات کاربر...</div>
 
 <button id="scoreBtn">0</button>
 <br />
@@ -68,13 +76,32 @@ if (typeof Telegram === "undefined" || !Telegram.WebApp) {
 
 /* ✅ مقداردهی اولیه WebApp */
 Telegram.WebApp.ready();
-Telegram.WebApp.expand(); // fullscreen
+Telegram.WebApp.expand();
 Telegram.WebApp.disableVerticalSwipes();
 
-/* ✅ تغییر تم با تم تلگرام */
-Telegram.WebApp.onEvent("themeChanged", () => {
-    document.body.style.background = Telegram.WebApp.backgroundColor;
-});
+/* ✅ دریافت اطلاعات کاربر */
+let userInfoBox = document.getElementById("userinfo");
+
+try {
+    const user = Telegram.WebApp.initDataUnsafe.user;
+
+    if (!user) {
+        userInfoBox.innerHTML = "❌ اطلاعات کاربر در دسترس نیست.";
+    } else {
+        const first = user.first_name || "";
+        const last = user.last_name || "";
+        const username = user.username ? "@" + user.username : "ندارد";
+
+        userInfoBox.innerHTML = `
+            👤 <b>اطلاعات کاربر:</b><br>
+            نام: ${first}<br>
+            نام خانوادگی: ${last}<br>
+            یوزرنیم: ${username}
+        `;
+    }
+} catch (err) {
+    userInfoBox.innerHTML = "❌ خطا در دریافت اطلاعات کاربر: " + err.message;
+}
 
 /* ✅ بازی */
 let score = 0;
@@ -83,17 +110,28 @@ document.getElementById("scoreBtn").onclick = () => {
     score++;
     document.getElementById("scoreBtn").innerText = score;
 
-    // ✅ Haptic feedback
     Telegram.WebApp.HapticFeedback.impactOccurred("light");
 };
 
-/* ✅ ارسال امتیاز به بات */
+/* ✅ ارسال امتیاز + اطلاعات کاربر */
 document.getElementById("submitBtn").onclick = () => {
-    const data = { score: score };
+    try {
+        const user = Telegram.WebApp.initDataUnsafe.user || {};
 
-    Telegram.WebApp.sendData(JSON.stringify(data));
+        const data = {
+            score: score,
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            username: user.username || ""
+        };
 
-    document.getElementById("status").innerText = "✅ امتیاز ارسال شد!";
+        Telegram.WebApp.sendData(JSON.stringify(data));
+
+        document.getElementById("status").innerText = "✅ امتیاز ارسال شد!";
+    } catch (err) {
+        document.getElementById("status").innerText =
+            "❌ خطا در ارسال: " + err.message;
+    }
 };
 </script>
 
