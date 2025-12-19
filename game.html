@@ -1,169 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="fa">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Telegram Click Game</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:0;background:var(--tg-theme-bg-color,#f5f5f5);color:var(--tg-theme-text-color,#222);-webkit-tap-highlight-color:transparent}
-    #game-container{max-width:100%;min-height:100vh;padding:20px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center}
-    #click-area{width:200px;height:200px;margin:20px auto;background:var(--tg-theme-button-color,#0088cc);border-radius:20px;display:flex;align-items:center;justify-content:center;color:var(--tg-theme-button-text-color,#fff);font-size:24px;font-weight:700;cursor:pointer;user-select:none;transition:transform .1s;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-    #score-display{font-size:28px;margin:15px 0;color:var(--tg-theme-text-color,#222)}
-    #username-display{font-size:20px;margin-bottom:10px;color:var(--tg-theme-hint-color,#999)}
-    .submitting{opacity:.7;pointer-events:none}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Game</title>
+
+<style>
+    body {
+        font-family: sans-serif;
+        background: #f2f2f2;
+        text-align: center;
+        padding-top: 40px;
+    }
+    #scoreBtn {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: #4a90e2;
+        color: white;
+        font-size: 32px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+    #submitBtn {
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: #2ecc71;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 18px;
+    }
+</style>
 </head>
+
 <body>
-  <div id="game-container">
-    <div id="username-display">Hello, <span id="username">Player</span>!</div>
-    <div id="score-display">Score: <span id="score">0</span></div>
-    <div id="click-area">TAP ME!</div>
-  </div>
 
-  <script>
-    const tg = window.Telegram?.WebApp;
-    let score = 0;
-    let username = "Player";
-    let isSubmitting = false;
+<h2>🎮 بازی کلیکی</h2>
+<p>هر بار کلیک = +1 امتیاز</p>
 
-    const scoreDisplay = document.getElementById('score');
-    const usernameDisplay = document.getElementById('username');
-    const clickArea = document.getElementById('click-area');
-    const gameContainer = document.getElementById('game-container');
+<button id="scoreBtn">0</button>
+<br>
+<button id="submitBtn">ارسال امتیاز</button>
 
-    function initGame(){
-      if(tg){
-        tg.expand();
-        tg.onEvent('themeChanged', updateTheme);
-        tg.onEvent('viewportChanged', updateLayout);
-        updateUserData();
-        setupMainButton();
-      }
-      updateTheme();
-      updateLayout();
-      setupEventListeners();
-    }
+<p id="status"></p>
 
-    function updateUserData(){
-      if(!tg) return;
-      const user = tg.initDataUnsafe?.user;
-      if(user){
-        username = user.first_name || `User${user.id}`;
-        if(user.username) username += ` (@${user.username})`;
-        usernameDisplay.textContent = username;
-      }
-    }
+<script>
+let score = 0;
 
-    function setupMainButton(){
-      if(!tg) return;
-      tg.MainButton.setText("SUBMIT SCORE");
-      tg.MainButton.onClick(handleSubmit);
-      tg.MainButton.disable();
-    }
+document.getElementById("scoreBtn").onclick = () => {
+    score++;
+    document.getElementById("scoreBtn").innerText = score;
+};
 
-    function setupEventListeners(){
-      clickArea.addEventListener('click', handleClick);
-      window.addEventListener('beforeunload', cleanup);
-    }
+document.getElementById("submitBtn").onclick = () => {
+    Telegram.WebApp.sendData(JSON.stringify({
+        score: score
+    }));
+    document.getElementById("status").innerText = "✅ امتیاز ارسال شد!";
+};
+</script>
 
-    function cleanup(){
-      clickArea.removeEventListener('click', handleClick);
-      window.removeEventListener('beforeunload', cleanup);
-      if(tg){
-        tg.offEvent('themeChanged', updateTheme);
-        tg.offEvent('viewportChanged', updateLayout);
-      }
-    }
-
-    function handleClick(){
-      if(isSubmitting) return;
-      score++;
-      scoreDisplay.textContent = score;
-      clickArea.style.transform = 'scale(.95)';
-      setTimeout(()=> clickArea.style.transform = 'scale(1)', 100);
-      if(tg && score === 1){
-        tg.MainButton.enable();
-        tg.MainButton.show();
-      }
-    }
-
-    async function handleSubmit() {
-  if (isSubmitting) return;
-  isSubmitting = true;
-  gameContainer.classList.add('submitting');
-  if (tg) tg.MainButton.showProgress();
-
-  const payload = {
-    action: 'submit_score',
-    username: username,
-    score: score,
-    timestamp: new Date().toISOString(),
-    initData: tg?.initData || ''
-  };
-
-  try {
-    console.log('tg exists?', !!tg);
-    console.log('About to send payload:', payload);
-
-    if (tg) {
-      tg.sendData(JSON.stringify(payload));
-      console.log('sendData called — waiting 1s');
-      await new Promise(r => setTimeout(r, 1000)); // برای دیباگ
-      // tg.close(); // فعلاً کامنت کن تا صفحه بسته نشود
-    } else {
-      // اگر می‌خواهی از سرور استفاده کنی، از آدرس کامل HTTPS استفاده کن (مثال پایین)
-      alert('Open the mini app from Telegram to submit.');
-    }
-  } catch (err) {
-    console.error('sendData failed', err);
-    if (tg) { tg.MainButton.hideProgress(); tg.showAlert('Submission failed'); }
-    else alert('Submission failed');
-  } finally {
-    isSubmitting = false;
-    gameContainer.classList.remove('submitting');
-    if (tg) tg.MainButton.hideProgress();
-  }
-}
-
-
-      try{
-        if(tg){
-          console.log('Sending via tg.sendData', payload);
-          tg.sendData(JSON.stringify(payload));
-          console.log('sendData called');
-          // برای دیباگ کمی تأخیر بده؛ بعد از تایید بات می‌توان tg.close() را فعال کرد
-          await new Promise(r => setTimeout(r, 800));
-          // tg.close();
-        } else {
-          alert(`Score ${score} submitted (local test).`);
-        }
-      } catch(err){
-        console.error('sendData failed', err);
-        if(tg){ tg.MainButton.hideProgress(); tg.showAlert('Submission failed'); }
-        else alert('Submission failed');
-      } finally {
-        isSubmitting = false;
-        gameContainer.classList.remove('submitting');
-        if(tg) tg.MainButton.hideProgress();
-      }
-    }
-
-    function updateTheme(){
-      if(!tg) return;
-      document.body.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
-      document.body.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
-      document.body.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
-      document.body.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#0088cc');
-      document.body.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
-    }
-
-    function updateLayout(){
-      if(!tg || !tg.viewportHeight) return;
-      document.getElementById('game-container').style.minHeight = `${tg.viewportHeight}px`;
-    }
-
-    document.addEventListener('DOMContentLoaded', initGame);
-  </script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 </body>
 </html>
