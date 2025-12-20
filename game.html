@@ -72,8 +72,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script>
-const WEBHOOK_URL = "https://miniapptelegramkawazaki.liveblog365.com/postrecive";
-
+// ✅ Telegram WebApp init
 let tg;
 try {
     tg = Telegram.WebApp;
@@ -84,7 +83,7 @@ try {
         "❌ لطفاً این Mini App را از داخل تلگرام باز کنید.";
 }
 
-// اطلاعات کاربر
+// ✅ دریافت اطلاعات کاربر
 let user = {};
 const userInfoEl = document.getElementById("userinfo");
 
@@ -102,57 +101,33 @@ try {
     userInfoEl.innerText = "❌ خطا در دریافت اطلاعات کاربر: " + err.message;
 }
 
+// ✅ امتیاز
 let score = 0;
-let isSubmitting = false;
 
-// کلیک برای افزایش امتیاز
+// ✅ کلیک برای افزایش امتیاز
 document.getElementById("scoreBtn").onclick = () => {
     score++;
     document.getElementById("scoreBtn").innerText = score;
 };
 
-// ارسال امتیاز به Webhook
-document.getElementById("submitBtn").onclick = async () => {
-    if (isSubmitting) return;
-    isSubmitting = true;
-
+// ✅ ارسال امتیاز با tg.sendData()
+document.getElementById("submitBtn").onclick = () => {
     const statusEl = document.getElementById("status");
-    const btn = document.getElementById("submitBtn");
+    statusEl.innerText = "⏳ در حال ارسال به بات...";
 
-    btn.disabled = true;
-    statusEl.innerText = "⏳ در حال ارسال...";
-
-    // initData برای گرفتن user_id در سرور ضروری است
     const payload = {
         action: "submit_score",
         username: user.username || "",
         score: score,
-        platform: "telegram",
-        timestamp: new Date().toISOString(),
-        initData: tg?.initData || ""
+        timestamp: new Date().toISOString()
     };
 
     try {
-        const res = await fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-
-        const body = await res.json().catch(() => ({}));
-
-        if (res.ok && body.status === "success") {
-            statusEl.innerText = "✅ امتیاز با موفقیت ثبت شد!";
-        } else {
-            statusEl.innerText =
-                "❌ خطا در سرور: " + (body.message || ("HTTP " + res.status));
-        }
+        tg.sendData(JSON.stringify(payload));
+        statusEl.innerText = "✅ امتیاز ارسال شد! بات پیام را دریافت می‌کند.";
     } catch (err) {
-        statusEl.innerText = "❌ خطا در ارتباط با سرور: " + err.message;
+        statusEl.innerText = "❌ خطا در ارسال: " + err.message;
     }
-
-    btn.disabled = false;
-    isSubmitting = false;
 };
 </script>
 
