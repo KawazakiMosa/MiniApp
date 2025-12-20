@@ -15,6 +15,10 @@
         margin: 0;
     }
 
+    h2 {
+        margin-top: 20px;
+    }
+
     #scoreBtn {
         width: 150px;
         height: 150px;
@@ -25,6 +29,7 @@
         border: none;
         cursor: pointer;
         box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        margin-top: 20px;
     }
 
     #submitBtn {
@@ -40,7 +45,12 @@
 
     #status {
         margin-top: 15px;
-        font-size: 16px;
+        font-size: 15px;
+    }
+
+    #userinfo {
+        margin-top: 15px;
+        font-size: 15px;
     }
 </style>
 </head>
@@ -50,59 +60,100 @@
 <h2>🎮 بازی کلیکی</h2>
 <p>هر بار کلیک = +1 امتیاز</p>
 
+<div id="userinfo">در حال دریافت اطلاعات کاربر...</div>
+
 <button id="scoreBtn">0</button>
 <br />
 <button id="submitBtn">ارسال امتیاز</button>
 
 <p id="status"></p>
 
+<!-- Telegram WebApp SDK -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script>
-Telegram.WebApp.ready();
-Telegram.WebApp.expand();
+const WEBHOOK_URL = "https://miniapptelegram.com/postrecive";
+
+let tg;
+try {
+    tg = Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+} catch (e) {
+    document.getElementById("status").innerText =
+        "❌ لطفاً این Mini App را از داخل تلگرام باز کنید.";
+}
+
+// اطلاعات کاربر
+let user = {};
+const userInfoEl = document.getElementById("userinfo");
+
+try {
+    user = tg?.initDataUnsafe?.user || {};
+    if (!user || !user.id) {
+        userInfoEl.innerText = "❌ اطلاعات کاربر در دسترس نیست.";
+    } else {
+        const first = user.first_name || "";
+        const last = user.last_name || "";
+        const username = user.username ? "@"+user.username : "بدون یوزرنیم";
+        userInfoEl.innerHTML = `👤 <b>${first} ${last}</b> (${username})`;
+    }
+} catch (err) {
+    userInfoEl.innerText = "❌ خطا در دریافت اطلاعات کاربر: " + err.message;
+}
 
 let score = 0;
 let isSubmitting = false;
 
+// کلیک برای افزایش امتیاز
 document.getElementById("scoreBtn").onclick = () => {
     score++;
     document.getElementById("scoreBtn").innerText = score;
 };
 
-document.getElementById("submitBtn").onclick = handleSubmit;
-
-async function handleSubmit() {
+// ارسال امتیاز به Webhook
+document.getElementById("submitBtn").onclick = async () => {
     if (isSubmitting) return;
     isSubmitting = true;
 
-    document.getElementById("submitBtn").disabled = true;
-    document.getElementById("status").innerText = "⏳ در حال ارسال...";
+    const statusEl = document.getElementById("status");
+    const btn = document.getElementById("submitBtn");
 
-    const tg = Telegram.WebApp;
-    const user = tg.initDataUnsafe?.user || {};
+    btn.disabled = true;
+    statusEl.innerText = "⏳ در حال ارسال...";
 
-    const data = {
+    // initData برای گرفتن user_id در سرور ضروری است
+    const payload = {
         action: "submit_score",
         username: user.username || "",
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
         score: score,
         platform: "telegram",
         timestamp: new Date().toISOString(),
-        initData: tg.initData || ""
+        initData: tg?.initData || ""
     };
 
     try {
-        tg.sendData(JSON.stringify(data));
-        document.getElementById("status").innerText = "✅ امتیاز ارسال شد!";
+        const res = await fetch(WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const body = await res.json().catch(() => ({}));
+
+        if (res.ok && body.status === "success") {
+            statusEl.innerText = "✅ امتیاز با موفقیت ثبت شد!";
+        } else {
+            statusEl.innerText =
+                "❌ خطا در سرور: " + (body.message || ("HTTP " + res.status));
+        }
     } catch (err) {
-        document.getElementById("status").innerText =
-            "❌ خطا در ارسال: " + err.message;
+        statusEl.innerText = "❌ خطا در ارتباط با سرور: " + err.message;
     }
 
+    btn.disabled = false;
     isSubmitting = false;
-}
+};
 </script>
 
 </body>
